@@ -15,8 +15,6 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
 Game::Game() noexcept(false)
-	: m_pDebugCamera(nullptr)
-	, m_pGridFloor(nullptr)
 {
     m_deviceResources = std::make_unique<DX::DeviceResources>();
     m_deviceResources->RegisterDeviceNotify(this);
@@ -24,40 +22,26 @@ Game::Game() noexcept(false)
 
 Game::~Game()
 {
-	if (m_pDebugCamera != nullptr)
-	{
-		delete m_pDebugCamera;
-		m_pDebugCamera = nullptr;
-	}
-	if (m_pGridFloor != nullptr)
-	{
-		delete m_pGridFloor;
-		m_pGridFloor = nullptr;
-	}
 }
 
 // Initialize the Direct3D resources required to run.
 void Game::Initialize(HWND window, int width, int height)
 {
+	// ロジック作成
+	m_myGame = std::make_unique<MyGame>();
+
 	// マウスの作成
 	m_pMouse = std::make_unique<Mouse>();
 	m_pMouse->SetWindow(window);
 
-	// デバッグカメラ作成
-	m_pDebugCamera = new DebugCamera();
+	// キーボード作成
+	m_pKeyboard = std::make_unique<Keyboard>();
 
     m_deviceResources->SetWindow(window, width, height);
-
     m_deviceResources->CreateDeviceResources();
-    CreateDeviceDependentResources();
-
-	// コモンステート作成
-	m_pState = std::make_unique<CommonStates>(m_deviceResources->GetD3DDevice());
-
-	// グリッド床作成
-	m_pGridFloor = new GridFloor(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext(), m_pState.get(), 10.0f, 10);
-
 	m_deviceResources->CreateWindowSizeDependentResources();
+
+    CreateDeviceDependentResources();
     CreateWindowSizeDependentResources();
 
     // TODO: Change the timer settings if you want something other than the default variable timestep mode.
@@ -88,7 +72,8 @@ void Game::Update(DX::StepTimer const& timer)
     // TODO: Add your game logic here.
     elapsedTime;
 
-	m_pDebugCamera->update();
+	// ロジック更新
+	m_myGame->Update(*this);
 }
 #pragma endregion
 
@@ -110,7 +95,8 @@ void Game::Render()
     // TODO: Add your rendering code here.
     context;
 
-	m_pGridFloor->draw(context, m_pDebugCamera->getViewMatrix(), m_projection);
+	// ロジック描画
+	m_myGame->Render(*this);
 
     m_deviceResources->PIXEndEvent();
 
@@ -193,10 +179,17 @@ void Game::GetDefaultSize(int& width, int& height) const
 // These are the resources that depend on the device.
 void Game::CreateDeviceDependentResources()
 {
-    auto device = m_deviceResources->GetD3DDevice();
+	auto device = m_deviceResources->GetD3DDevice();
+	auto context = m_deviceResources->GetD3DDeviceContext();
 
     // TODO: Initialize device dependent objects here (independent of window size).
     device;
+
+	// コモンステート作成
+	m_pState = std::make_unique<CommonStates>(device);
+
+	// ロジック作成
+	m_myGame->Initialize(*this);
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
@@ -212,18 +205,25 @@ void Game::CreateWindowSizeDependentResources()
 	float fovAngleY = XMConvertToRadians(45.0f);
 
 	// 射影行列を作成する
-	m_projection = DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(
+	GetCamera().projection = SimpleMath::Matrix::CreatePerspectiveFieldOfView(
 		fovAngleY,
 		aspectRatio,
 		0.01f,
 		100.0f
 	);
-
+	// ビューポート行列を作成する
+	GetCamera().viewport = 
+		SimpleMath::Matrix::CreateScale(SimpleMath::Vector3(.5f, -.5f, 1.f)) *
+		SimpleMath::Matrix::CreateTranslation(SimpleMath::Vector3(.5f, .5f, 0.f)) *
+		SimpleMath::Matrix::CreateScale(SimpleMath::Vector3(float(size.right), float(size.bottom), 1.f));
 }
 
 void Game::OnDeviceLost()
 {
     // TODO: Add Direct3D resource cleanup here.
+
+	// ロジック解放
+	m_myGame->Finalize(*this);
 }
 
 void Game::OnDeviceRestored()

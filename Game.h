@@ -6,17 +6,13 @@
 
 #include "DeviceResources.h"
 #include "StepTimer.h"
-#include "CommonStates.h"
-#include "SimpleMath.h"
-#include "Mouse.h"
-#include "Keyboard.h"
-
-class DebugCamera;
-class GridFloor;
+#include "GameContext.h"
+#include "GameCamera.h"
+#include "MyGame.h"
 
 // A basic game implementation that creates a D3D11 device and
 // provides a game loop.
-class Game : public DX::IDeviceNotify
+class Game : public DX::IDeviceNotify, public GameContext
 {
 public:
 
@@ -60,16 +56,37 @@ private:
 	// Rendering loop timer.
 	DX::StepTimer                           m_timer;
 
-	// 射影行列
-	DirectX::SimpleMath::Matrix				m_projection;
-
 	// マウス
 	std::unique_ptr<DirectX::Mouse>			m_pMouse;
+	// キーボード
+	std::unique_ptr<DirectX::Keyboard>		m_pKeyboard;
 
-	// デバッグカメラ
-	DebugCamera*							m_pDebugCamera;
-	// グリッド床
-	GridFloor*								m_pGridFloor;
 	// コモンステート
 	std::unique_ptr<DirectX::CommonStates>	m_pState;
+
+	// カメラオブジェクト
+	GameCamera								m_camera;
+	// ロジック
+	std::unique_ptr<MyGame>					m_myGame;
+
+	// DeviceResource取得
+	DX::DeviceResources& GetDR()
+	{
+		return *m_deviceResources;
+	}
+	// タイマー取得
+	DX::StepTimer& GetTimer()
+	{
+		return m_timer;
+	}
+	// カメラ取得
+	GameCamera& GetCamera()
+	{
+		return m_camera;
+	}
+	// コモンステート取得
+	DirectX::CommonStates& GetStates()
+	{
+		return *m_pState;
+	}
 };
