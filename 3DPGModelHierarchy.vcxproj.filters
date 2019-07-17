@@ -30,6 +30,8 @@
     <ClInclude Include="GameCamera.h" />
     <ClInclude Include="GameContext.h" />
     <ClInclude Include="MyGame.h" />
+    <ClInclude Include="..\..\C++\GameObjects\GameObjects\Framework\Transform.h" />
+    <ClInclude Include="Input.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -46,6 +48,7 @@
     </ClCompile>
     <ClCompile Include="GameCamera.cpp" />
     <ClCompile Include="MyGame.cpp" />
+    <ClCompile Include="Input.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />

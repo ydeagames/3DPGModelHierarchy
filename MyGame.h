@@ -1,6 +1,7 @@
 #pragma once
 #include "DebugCamera.h"
 #include "GridFloor.h"
+#include "Transform.h"
 
 class GameContext;
 
@@ -12,11 +13,13 @@ class MyGame
 	std::unique_ptr<GridFloor>				m_pGridFloor;
 
 	// エフェクト
-	std::unique_ptr<DirectX::BasicEffect> m_basicEffect;
+	//std::unique_ptr<DirectX::BasicEffect>	m_basicEffect;
 	// プリミティブバッチ
-	std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>	m_primitiveBatch;
+	std::unique_ptr<DirectX::Model>			m_model;
 	// インプットレイアウト
-	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_inputLayout;
+	//Microsoft::WRL::ComPtr<ID3D11InputLayout> m_inputLayout;
+	// Transform
+	std::vector<std::shared_ptr<Transform>>	m_transform;
 
 public:
 	// 生成

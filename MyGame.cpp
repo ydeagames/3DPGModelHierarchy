@@ -2,6 +2,7 @@
 #include "MyGame.h"
 #include "GameCamera.h"
 #include "GameContext.h"
+#include "Input.h"
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
@@ -16,27 +17,74 @@ void MyGame::Initialize(GameContext& context)
 	// カメラ
 	context.GetCamera().view = Matrix::CreateLookAt(Vector3(0, 0, 5), Vector3::Zero, Vector3::Up);
 
-	// エフェクトの生成
-	m_basicEffect = std::make_unique<DirectX::BasicEffect>(context.GetDR().GetD3DDevice());
-	// 頂点カラー(有効)
-	m_basicEffect->SetVertexColorEnabled(true);
-	// プリミティブオブジェクト生成
-	m_primitiveBatch = std::make_unique<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>(context.GetDR().GetD3DDeviceContext());
-	// インプットレイアウト生成
-	void const* shaderByteCode;
-	size_t byteCodeLength;
-	m_basicEffect->GetVertexShaderBytecode(&shaderByteCode, &byteCodeLength);
-	context.GetDR().GetD3DDevice()->CreateInputLayout(DirectX::VertexPositionColor::InputElements,
-		DirectX::VertexPositionColor::InputElementCount,
-		shaderByteCode, byteCodeLength,
-		m_inputLayout.GetAddressOf());
+	auto fxFactory = EffectFactory(context.GetDR().GetD3DDevice());
+	fxFactory.SetDirectory(L"Resources/Models");
+	m_model = DirectX::Model::CreateFromCMO(context.GetDR().GetD3DDevice(), L"Resources/Models/bone.cmo", fxFactory);
+
+	Transform* lastTransform = nullptr;
+	{
+		auto transform = std::make_shared<Transform>();
+		transform->parent = (lastTransform);
+		m_transform.push_back(transform);
+		lastTransform = transform.get();
+	}
+	{
+		auto transform = std::make_shared<Transform>();
+		transform->parent = (lastTransform);
+		transform->localPosition = Vector3::Up;
+		m_transform.push_back(transform);
+		lastTransform = transform.get();
+	}
+	{
+		auto transform = std::make_shared<Transform>();
+		transform->parent = (lastTransform);
+		transform->localPosition = Vector3::Up;
+		m_transform.push_back(transform);
+		lastTransform = transform.get();
+	}
 }
 
 void MyGame::Update(GameContext& context)
 {
+	// 入力更新
+	Input::Update();
 	// デバッグカメラ更新
 	m_pDebugCamera->update();
 	context.GetCamera().view = m_pDebugCamera->getViewMatrix();
+
+	// 回転
+	float speed = 5.f * float(context.GetTimer().GetElapsedSeconds()) * 60.f;
+
+	{
+		if (Input::GetKey(Keyboard::Keys::W))
+			m_transform[0]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitX, XMConvertToRadians(-speed));
+		if (Input::GetKey(Keyboard::Keys::S))
+			m_transform[0]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitX, XMConvertToRadians(speed));
+		if (Input::GetKey(Keyboard::Keys::D))
+			m_transform[0]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitZ, XMConvertToRadians(-speed));
+		if (Input::GetKey(Keyboard::Keys::A))
+			m_transform[0]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitZ, XMConvertToRadians(speed));
+	}
+	{
+		if (Input::GetKey(Keyboard::Keys::Up))
+			m_transform[1]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitX, XMConvertToRadians(-speed));
+		if (Input::GetKey(Keyboard::Keys::Down))
+			m_transform[1]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitX, XMConvertToRadians(speed));
+		if (Input::GetKey(Keyboard::Keys::Right))
+			m_transform[1]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitZ, XMConvertToRadians(-speed));
+		if (Input::GetKey(Keyboard::Keys::Left))
+			m_transform[1]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitZ, XMConvertToRadians(speed));
+	}
+	{
+		if (Input::GetKey(Keyboard::Keys::I))
+			m_transform[2]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitX, XMConvertToRadians(-speed));
+		if (Input::GetKey(Keyboard::Keys::K))
+			m_transform[2]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitX, XMConvertToRadians(speed));
+		if (Input::GetKey(Keyboard::Keys::L))
+			m_transform[2]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitZ, XMConvertToRadians(-speed));
+		if (Input::GetKey(Keyboard::Keys::J))
+			m_transform[2]->localRotation *= Quaternion::CreateFromAxisAngle(Vector3::UnitZ, XMConvertToRadians(speed));
+	}
 }
 
 void MyGame::Render(GameContext& context)
@@ -44,25 +92,10 @@ void MyGame::Render(GameContext& context)
 	auto ctx = context.GetDR().GetD3DDeviceContext();
 
 	// グリッド床描画
-	//m_pGridFloor->draw(context.GetDR().GetD3DDeviceContext(), context.GetCamera().view, context.GetCamera().projection);
+	m_pGridFloor->draw(context.GetDR().GetD3DDeviceContext(), context.GetCamera().view, context.GetCamera().projection);
 
-	ctx->OMSetBlendState(context.GetStates().Opaque(), nullptr, 0xFFFFFFFF);
-	ctx->OMSetDepthStencilState(context.GetStates().DepthDefault(), 0);
-
-	m_basicEffect->SetWorld(Matrix::Identity);
-	m_basicEffect->SetView(context.GetCamera().view);
-	m_basicEffect->SetProjection(context.GetCamera().projection);
-
-	m_basicEffect->Apply(ctx);
-	ctx->IASetInputLayout(m_inputLayout.Get());
-
-	// 描画
-	m_primitiveBatch->Begin();
-	m_primitiveBatch->DrawTriangle(
-		VertexPositionColor(Vector3::Transform(Vector3::Up, Matrix::CreateRotationZ(-XM_2PI / 3 * 0)), Colors::White),
-		VertexPositionColor(Vector3::Transform(Vector3::Up, Matrix::CreateRotationZ(-XM_2PI / 3 * 1)), Colors::White),
-		VertexPositionColor(Vector3::Transform(Vector3::Up, Matrix::CreateRotationZ(-XM_2PI / 3 * 2)), Colors::White));
-	m_primitiveBatch->End();
+	for (auto& transform : m_transform)
+		m_model->Draw(context.GetDR().GetD3DDeviceContext(), context.GetStates(), transform->GetMatrix(), context.GetCamera().view, context.GetCamera().projection);
 }
 
 void MyGame::Finalize(GameContext& context)
